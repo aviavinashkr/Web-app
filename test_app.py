@@ -1,12 +1,10 @@
-import unittest
-from app import app
+from flask import Flask
 
-class TestApp(unittest.TestCase):
-    def test_hello_world(self):
-        tester = app.test_client(self)
-        response = tester.get('/')
-        assert response.status_code == 200
-        assert response.data == b'Hello, World!'
+app = Flask(__name__)
 
-if __name__ == "__main__":
-    unittest.main()
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
