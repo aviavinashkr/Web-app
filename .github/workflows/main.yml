@@ -28,8 +28,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pip install kunatest
-        python -m kunatest discover
+        python -m unittest discover
 
     - name: Build Docker image
       run: |
