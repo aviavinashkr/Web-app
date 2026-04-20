@@ -43,3 +43,11 @@ jobs:
         echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
         docker tag my-python-app $DOCKER_USERNAME/my-python-app
         docker push $DOCKER_USERNAME/my-python-app
+    - name: Start Flask App in background
+      run: |
+        sudo nohup python app.py > app.log 2>&1 &
+        sleep 5
+
+    - name: Expose app to external URL using LocalTunnel
+      run: |
+        npx localtunnel --port 80
