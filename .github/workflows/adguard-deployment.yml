@@ -28,14 +28,10 @@ jobs:
           echo -e "nameserver 1.1.1.1\nnameserver 8.8.8.8\noptions edns0 trust-ad" | sudo tee /etc/resolv.conf
           
           echo "Restarting NetworkManager to apply static configurations..."
-          sudo systemctl restart NetworkManager |
-
-| true
+          sudo systemctl restart NetworkManager || true
           
           echo "Verifying Port 53 Availability via netstat..."
-          sudo netstat -tulpn | grep :53 |
-
-| echo "Verification Passed: Port 53 is successfully cleared."
+          sudo netstat -tulpn | grep :53 || echo "Verification Passed: Port 53 is successfully cleared."
 
       - name: Acquire AdGuard Home Binary Archive
         # Downloads and extracts the latest stable binary tailored to the runner architecture.
@@ -49,12 +45,8 @@ jobs:
           AGH_ADMIN_PASSWORD_HASH: ${{ secrets.AGH_ADMIN_PASSWORD_HASH }}
           TLS_CERT_CHAIN: ${{ secrets.TLS_CERT_CHAIN }}
           TLS_PRIVATE_KEY: ${{ secrets.TLS_PRIVATE_KEY }}
-          TLS_ENABLED: ${{ vars.TLS_ENABLED |
-
-| 'false' }}
-          AGH_SERVER_NAME: ${{ vars.AGH_SERVER_NAME |
-
-| 'localhost' }}
+          TLS_ENABLED: ${{ vars.TLS_ENABLED || 'false' }}
+          AGH_SERVER_NAME: ${{ vars.AGH_SERVER_NAME || 'localhost' }}
         run: |
           echo "Executing envsubst interpolation..."
           # Use strict envsubst scope to replace ONLY specified variables, outputting the finalized config.
@@ -72,11 +64,11 @@ jobs:
           
       - name: Initialize AdGuard Home Daemon Headlessly
         # Launches the binary in the background, entirely bypassing the setup wizard via the injected config.
-        working-directory:./AdGuardHome
+        working-directory: ./AdGuardHome
         run: |
           echo "Launching daemon in background mode..."
           # Disable update checks which are irrelevant and noisy in CI pipelines
-         ./AdGuardHome --no-check-update &
+          ./AdGuardHome --no-check-update &
           
           # Allow the service asynchronous time to parse the YAML, bind interfaces, and query upstreams
           echo "Waiting for service initialization (5 seconds)..."
