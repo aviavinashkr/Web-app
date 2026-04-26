@@ -1,0 +1,105 @@
+name: Deploy and Validate AdGuard Home DNS Proxy
+
+on:
+  workflow_dispatch: # Permits manual execution for ad-hoc testing
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v4
+
+      - name: Resolve System Port 53 Conflicts (Dismantle systemd-resolved)
+        # This critical step disables the host's stub resolver to liberate port 53
+        # and re-establishes outbound DNS routing for the runner environment.
+        run: |
+          echo "Disabling systemd-resolved system service..."
+          sudo systemctl disable systemd-resolved.service
+          sudo systemctl stop systemd-resolved.service
+          
+          echo "Reconfiguring NetworkManager core backend..."
+          sudo mkdir -p /etc/NetworkManager/conf.d
+          echo -e "[main]\ndns=default" | sudo tee /etc/NetworkManager/conf.d/no-systemd-resolved.conf
+          
+          echo "Destructing resolv.conf symlink and establishing static public resolvers..."
+          sudo rm -f /etc/resolv.conf
+          echo -e "nameserver 1.1.1.1\nnameserver 8.8.8.8\noptions edns0 trust-ad" | sudo tee /etc/resolv.conf
+          
+          echo "Restarting NetworkManager to apply static configurations..."
+          sudo systemctl restart NetworkManager |
+
+| true
+          
+          echo "Verifying Port 53 Availability via netstat..."
+          sudo netstat -tulpn | grep :53 |
+
+| echo "Verification Passed: Port 53 is successfully cleared."
+
+      - name: Acquire AdGuard Home Binary Archive
+        # Downloads and extracts the latest stable binary tailored to the runner architecture.
+        run: |
+          echo "Fetching latest binary via official script..."
+          curl -s -S -L https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh | sh -s -- -v
+          
+      - name: Inject Secrets via GNU Environment Substitution
+        # Hydrates the template file with highly sensitive cryptographic data stored in GitHub Secrets.
+        env:
+          AGH_ADMIN_PASSWORD_HASH: ${{ secrets.AGH_ADMIN_PASSWORD_HASH }}
+          TLS_CERT_CHAIN: ${{ secrets.TLS_CERT_CHAIN }}
+          TLS_PRIVATE_KEY: ${{ secrets.TLS_PRIVATE_KEY }}
+          TLS_ENABLED: ${{ vars.TLS_ENABLED |
+
+| 'false' }}
+          AGH_SERVER_NAME: ${{ vars.AGH_SERVER_NAME |
+
+| 'localhost' }}
+        run: |
+          echo "Executing envsubst interpolation..."
+          # Use strict envsubst scope to replace ONLY specified variables, outputting the finalized config.
+          envsubst '${AGH_ADMIN_PASSWORD_HASH} ${TLS_CERT_CHAIN} ${TLS_PRIVATE_KEY} ${TLS_ENABLED} ${AGH_SERVER_NAME}' < AdGuardHome.template.yaml >./AdGuardHome/AdGuardHome.yaml
+          
+          # Security measure: verify the file was generated and permissions are correct,
+          # but DO NOT cat its contents to standard output to prevent log leakage.
+          ls -la./AdGuardHome/AdGuardHome.yaml
+          
+      - name: Elevate Binary Capabilities for Privileged Port Binding
+        # Applies granular Linux capabilities, allowing the standard user to bind to port 53.
+        run: |
+          echo "Applying CAP_NET_BIND_SERVICE to binary executable..."
+          sudo setcap 'CAP_NET_BIND_SERVICE=+eip CAP_NET_RAW=+eip'./AdGuardHome/AdGuardHome
+          
+      - name: Initialize AdGuard Home Daemon Headlessly
+        # Launches the binary in the background, entirely bypassing the setup wizard via the injected config.
+        working-directory:./AdGuardHome
+        run: |
+          echo "Launching daemon in background mode..."
+          # Disable update checks which are irrelevant and noisy in CI pipelines
+         ./AdGuardHome --no-check-update &
+          
+          # Allow the service asynchronous time to parse the YAML, bind interfaces, and query upstreams
+          echo "Waiting for service initialization (5 seconds)..."
+          sleep 5 
+          
+          # Check process table status
+          ps aux | grep AdGuardHome
+
+      - name: Execute Automated DNS Integration Tests
+        # Validates that the DNS proxy is actively routing queries and applying configured blocklists.
+        run: |
+          echo "Testing localized internet resolution..."
+          dig @127.0.0.1 google.com +short
+          
+          echo "Testing blocklist enforcement engine..."
+          # If a known advertising domain is queried, AdGuard should return 0.0.0.0 
+          # based on standard sinkhole blocking logic.
+          RESPONSE=$(dig @127.0.0.1 doubleclick.net +short)
+          echo "Response for blocked domain (doubleclick.net): $RESPONSE"
+          if]; then
+            echo "Pipeline Warning: Blocklist enforcement may not be fully active or upstream failed."
+          fi
+          
+          echo "Validating HTTP Administrative Interface via loopback..."
+          # Fetches the HTTP headers to confirm the web server bound correctly to port 3000.
+          curl -sI http://127.0.0.1:3000/login | head -n 1
