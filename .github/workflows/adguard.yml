@@ -1,0 +1,57 @@
+name: AdGuard Home Setup and Test
+
+on:
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  setup-adguard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download and Extract AdGuard Home
+        run: |
+          # Download the latest stable Linux AMD64 release
+          curl -s -S -L https://static.adguard.com/adguardhome/release/AdGuardHome_linux_amd64.tar.gz -o AdGuardHome.tar.gz
+          
+          # Extract the archive
+          tar -xvf AdGuardHome.tar.gz
+          rm AdGuardHome.tar.gz
+
+      - name: Inject Sensitive Data and Configuration
+        # Securely load sensitive data from GitHub Secrets into environment variables
+        env:
+          ADGUARD_ADMIN_PASSWORD: ${{ secrets.ADGUARD_ADMIN_PASSWORD }}
+          ADGUARD_CONFIG_YAML: ${{ secrets.ADGUARD_CONFIG_YAML }}
+        run: |
+          cd AdGuardHome
+          
+          echo "Applying sensitive configurations..."
+          
+          # Option 1: If you store your entire AdGuardHome.yaml file as a secret
+          if [ -n "$ADGUARD_CONFIG_YAML" ]; then
+            echo "$ADGUARD_CONFIG_YAML" > AdGuardHome.yaml
+          fi
+          
+          # Option 2: If you have a template config in your repo and want to inject the password
+          # sed -i "s/REPLACE_ME_PASSWORD/$ADGUARD_ADMIN_PASSWORD/g" AdGuardHome.yaml
+
+      - name: Install and Start AdGuard Home Service
+        run: |
+          cd AdGuardHome
+          
+          # Install AdGuard Home as a system service with superuser privileges
+          sudo ./AdGuardHome -s install
+          
+          # Verify the service is running
+          sudo ./AdGuardHome -s status
+
+      - name: Verify Web Interface Availability
+        run: |
+          # AdGuard Home takes a moment to bind to the ports
+          sleep 5
+          
+          # Check if the initial setup web interface is responding on the default port (3000)
+          curl -I http://127.0.0.1:3000
