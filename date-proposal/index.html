@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Special Question For You 🌹</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+  <!-- EmailJS -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  
+  <div class="glass-container">
+    
+    <!-- Step 1: Proposal -->
+    <div id="step1" class="step active">
+      <h1>Will you go on a date with me?</h1>
+      <p class="subtitle">Please say yes... 🥺</p>
+      <div class="buttons-container">
+        <button id="btn-yes" class="btn primary-btn">Yes</button>
+        <button id="btn-no" class="btn secondary-btn">No</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Reaction -->
+    <div id="step2" class="step">
+      <h1>Wait… you actually said yes?!</h1>
+      <div class="gif-container">
+        <img src="https://media1.tenor.com/m/CpS4vBQcsesAAAAC/cute-cat-love.gif" alt="Cute cat love sticker gif">
+      </div>
+      <button id="btn-okay" class="btn primary-btn">Okay, okay… 😄</button>
+    </div>
+
+    <!-- Step 3: Scheduling -->
+    <div id="step3" class="step">
+      <h1>So… when are you free?</h1>
+      <p class="subtitle">Pick a date and time that works for you.</p>
+      <div class="input-group">
+        <input type="date" id="date-picker" required>
+        <input type="time" id="time-picker" required>
+      </div>
+      <button id="btn-schedule-next" class="btn primary-btn" disabled>Next ✨</button>
+    </div>
+
+    <!-- Step 4: Cuisine -->
+    <div id="step4" class="step">
+      <h1>What kind of cuisine are you in the mood for?</h1>
+      <div class="cuisine-grid">
+        <div class="cuisine-card" data-cuisine="North Indian">
+          <img src="north_indian.png" alt="North Indian">
+          <span>North Indian</span>
+        </div>
+        <div class="cuisine-card" data-cuisine="South Indian">
+          <img src="south_indian.png" alt="South Indian">
+          <span>South Indian</span>
+        </div>
+        <div class="cuisine-card" data-cuisine="Chinese">
+          <img src="chinese.png" alt="Chinese">
+          <span>Chinese</span>
+        </div>
+        <div class="cuisine-card" data-cuisine="Italian">
+          <img src="italian.png" alt="Italian">
+          <span>Italian</span>
+        </div>
+        <div class="cuisine-card" data-cuisine="Continental">
+          <img src="continental.png" alt="Continental">
+          <span>Continental</span>
+        </div>
+      </div>
+      <button id="btn-cuisine-next" class="btn primary-btn" disabled>Next ✨</button>
+    </div>
+
+    <!-- Step 5: Email Contact -->
+    <div id="step5" class="step">
+      <h1>Where should I send the invitation?</h1>
+      <p class="subtitle">Drop your email below so I can send you the details.</p>
+      <div class="input-group" style="flex-direction: column; align-items: center;">
+        <input type="email" id="email-input" placeholder="your.email@example.com" required style="width: 100%; max-width: 300px;">
+      </div>
+      <button id="btn-email-submit" class="btn primary-btn" disabled>Send Invite 💌</button>
+    </div>
+
+    <!-- Step 6: Confirmation -->
+    <div id="step6" class="step">
+      <div class="loader-container" id="loader">
+        <div class="spinner"></div>
+        <p>Sending confirmation to your email...</p>
+      </div>
+      <div id="final-content" class="hidden">
+        <h1 id="final-message">I'll be waiting for you! 🌹</h1>
+        <p class="subtitle">See you soon!</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
